@@ -1,7 +1,12 @@
-#include<Arduino.h>
+#include <boarddefs.h>
+#include <ir_Lego_PF_BitStreamEncoder.h>
+#include <IRremote.h>
+#include <IRremoteInt.h>
+
+//#include<Arduino.h>
 
 #define segA 8
-#define segB 12
+#define segB A4
 #define segC 7
 #define segD 13
 #define segE A0
@@ -16,9 +21,15 @@
 
 #define intp 2
 
+#define RECV 12
+IRrecv irrecv(RECV);
+decode_results results;
+
+static const uint8_t tonePin = 3;
+
 bool is_intp = true;
 byte modeNum = -1;
-byte modeMax = 4;
+byte modeMax = 5;
 int segLight = 255;
 
 void setup()
@@ -54,6 +65,16 @@ void loop()
 	bool is_mainDis = true;
 	int var = 0;
 
+	if (irrecv.decode(&results))
+    {
+		digitalWrite(13, HIGH);
+		unsigned long hex = results.value;
+		Serial.print("hex: ");
+		Serial.println(hex);
+    	irrecv.resume();
+		digitalWrite(13, LOW);
+	}
+
 	switch (modeNum % modeMax)
 	{
 		case 0:
@@ -70,6 +91,11 @@ void loop()
 			break;
 		case 3:
 			var = checkA3();
+			break;
+		case 4:
+			is_mainDis = false;
+			IRremo();
+			offLED();
 			break;
 
 		default:
@@ -180,14 +206,54 @@ void checkL()
 	}
 }
 
+void IRremo()
+{
+	if (irrecv.decode(&results))
+    {
+		digitalWrite(13, HIGH);
+		unsigned long hex = results.value;
+		Serial.print("hex: ");
+		Serial.println(hex);
+    	irrecv.resume();
+		digitalWrite(13, LOW);
+	}
+}
+
+unsigned long readRemote()
+{
+	unsigned long hex = NULL;
+	if (irrecv.decode(&results))
+    {
+		digitalWrite(13, HIGH);
+		hex = results.value;
+    	irrecv.resume();
+		digitalWrite(13, LOW);
+	}
+	return hex;
+}
+
 int bit10Tobit8(int bit10)
 {
 	return (bit10 * 256) / 1024;
 }
 
-int checkA7()
+int hexDecode(unsigned long hex)
 {
-	return analogRead(A7);
+    switch (hex)
+    {
+        case 0x23EAE8C2: return 0; break;
+		case 0x94F37EE4: return 1; break;
+	    case 0xF61D79DE: return 2; break;
+	    case 0x81772F84: return 3; break;
+    	case 0x4D91BBBE: return 4; break;
+    	case 0xC7695F20: return 5; break;
+    	case 0x8AC8FA2: return 6; break;
+    	case 0x95D2E7E4: return 7; break;
+	    case 0x1353935E: return 8; break;
+    	case 0xCC7E81C8: return 9; break;
+
+        default: return -1; break;
+    }
 }
 
 int checkA6()
@@ -198,11 +264,6 @@ int checkA6()
 int checkA5()
 {
 	return analogRead(A5);
-}
-
-int checkA4()
-{
-	return analogRead(A4);
 }
 
 int checkA3()
