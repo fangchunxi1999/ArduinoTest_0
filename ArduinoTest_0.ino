@@ -5,6 +5,7 @@
 
 //#include<Arduino.h>
 
+
 #define segA 8
 #define segB A4
 #define segC 7
