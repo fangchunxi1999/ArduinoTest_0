@@ -1,24 +1,24 @@
 #include<Arduino.h>
 
-#define segA 7
+#define segA 8
 #define segB 12
-#define segC 5
+#define segC 7
 #define segD 13
 #define segE A0
 #define segF 4
-#define segG 8
+#define segG 11
 #define segDP A1
 
-#define dig1 6
-#define dig2 9
-#define dig3 10
-#define dig4 11
+#define dig1 5
+#define dig2 6
+#define dig3 9
+#define dig4 10
 
 #define intp 2
 
 bool is_intp = true;
 byte modeNum = -1;
-byte modeMax = 3;
+byte modeMax = 4;
 int segLight = 255;
 
 void setup()
@@ -46,77 +46,78 @@ void setup()
 	checkSystem();
 }
 
+unsigned int cycle = 0;
 void loop()
 {
 	segLight = bit10Tobit8(checkA6());
 	bool is_onDP = false;
-	float var = 0;
-
-	/*
-	if (is_intp == true)
-	{
-		offLED();
-		delay(100);
-		analogWrite(dig3, segLight);
-		segDisplay(modeNum % modeMax);
-		is_intp = false;
-		delay(395);
-		offLED();
-	}*/
-
+	bool is_mainDis = true;
+	int var = 0;
 
 	switch (modeNum % modeMax)
 	{
 		case 0:
-			var = 0.0f;
-			is_onDP = false;
+			var = (int)((((checkA2() / 1023.0) * 5.0)) * 100);
+			is_onDP = true;
 			break;
 		case 1:
-			var = 1.1f;
-			is_onDP = true;
+			var = checkA2();
 			break;
 		case 2:
-			var = 2.2f;
-			is_onDP = true;
+			is_mainDis = false;
+			checkL();
+			offLED();
+			break;
+		case 3:
+			var = checkA3();
 			break;
 
 		default:
-			var = 5.0f;
-			is_onDP = false;
+			var = 0;
 			break;
 	}
 
+	Serial.print("var: ");
+	Serial.println(var);
 	//display
 
-	var *= 100.0f;
-
-	int t1 = var / 1000;
-	var = var - t1 *1000;
-	offLED();
-	analogWrite(dig1, segLight);
-	segDisplay(t1);
-
-	int t2 = var / 100;
-	var = var - t2 *100;
-	offLED();
-	analogWrite(dig2, segLight);
-	if (is_onDP)
+	if (is_mainDis)
 	{
-		digitalWrite(segDP, HIGH);
+		int t1 = var / 1000;
+		var = var - t1 *1000;
+		offLED();
+		analogWrite(dig1, segLight);
+		segDisplay(t1);
+
+		int t2 = var / 100;
+		var = var - t2 *100;
+		offLED();
+		analogWrite(dig2, segLight);
+		if (is_onDP)
+		{
+			digitalWrite(segDP, HIGH);
+		}
+		segDisplay(t2);
+
+		int t3 = var / 10;
+		var = var - t3 *10;
+		offLED();
+		analogWrite(dig3, segLight);
+		segDisplay(t3);
+
+		int t4 = var;
+		offLED();
+		analogWrite(dig4, segLight);
+		segDisplay(t4);
 	}
-	segDisplay(t2);
-
-	int t3 = var / 10;
-	var = var - t3 *10;
-	offLED();
-	analogWrite(dig3, segLight);
-	segDisplay(t3);
-
-	int t4 = var;
-	offLED();
-	analogWrite(dig4, segLight);
-	segDisplay(t4);
 	//display
+
+	cycle++;
+
+	if (cycle > 100)
+	{
+		cycle = 0;
+	}
 
 	Serial.print("modeNum: ");
 	Serial.println(modeNum);
@@ -129,9 +130,54 @@ void intp_program()
 {
 	if (digitalRead(intp) == HIGH)
 	{
-		modeNum++;
+		modeNum = ++modeNum % modeMax;
+		//modeNum++;
+		cycle = 101;
 	}
-	is_intp = true;
+}
+
+void checkL()
+{
+	int light = checkA3();
+	Serial.print("light: ");
+	Serial.println(light);
+
+	if (light > 1000)
+	{
+		scaleDisplay(0);
+	}
+	else if (light > 920)
+	{
+		scaleDisplay(1);
+	}
+	else if (light > 840)
+	{
+		scaleDisplay(2);
+	}
+	else if (light > 760)
+	{
+		scaleDisplay(3);
+	}
+	else if (light > 680)
+	{
+		scaleDisplay(4);
+	}
+	else if (light > 600)
+	{
+		scaleDisplay(5);
+	}
+	else if (light > 520)
+	{
+		scaleDisplay(6);
+	}
+	else if (light > 440)
+	{
+		scaleDisplay(7);
+	}
+	else
+	{
+		scaleDisplay(8);
+	}
 }
 
 int bit10Tobit8(int bit10)
@@ -147,6 +193,26 @@ int checkA7()
 int checkA6()
 {
 	return analogRead(A6);
+}
+
+int checkA5()
+{
+	return analogRead(A5);
+}
+
+int checkA4()
+{
+	return analogRead(A4);
+}
+
+int checkA3()
+{
+	return analogRead(A3);
+}
+
+int checkA2()
+{
+	return analogRead(A2);
 }
 
 void segDisplay(int c)
@@ -242,8 +308,146 @@ void segDisplay(int c)
 			delay(5);
             break;
 
+		case 10:
+			digitalWrite(segE, HIGH);
+			digitalWrite(segF, HIGH);
+			delay(5);
+            break;
+
+		case 11:
+			digitalWrite(segB, HIGH);
+			digitalWrite(segC, HIGH);
+			digitalWrite(segE, HIGH);
+			digitalWrite(segF, HIGH);
+			delay(5);
+            break;
     }
-} 
+}
+
+void scaleDisplay(int s)
+{
+	switch (s)
+	{
+		case 0:
+			offLED();
+			delay(5);
+			offLED();
+			delay(5);
+			offLED();
+			delay(5);
+			offLED();
+			delay(5);
+			break;
+
+		case 1:
+			offLED();
+			analogWrite(dig1, segLight);
+			segDisplay(10);
+			offLED();
+			delay(5);
+			offLED();
+			delay(5);
+			offLED();
+			delay(5);
+			break;
+
+		case 2:
+			offLED();
+			analogWrite(dig1, segLight);
+			segDisplay(11);
+			offLED();
+			delay(5);
+			offLED();
+			delay(5);
+			offLED();
+			delay(5);
+			break;
+
+		case 3:
+			offLED();
+			analogWrite(dig1, segLight);
+			segDisplay(11);
+			offLED();
+			analogWrite(dig2, segLight);
+			segDisplay(10);
+			offLED();
+			delay(5);
+			offLED();
+			delay(5);
+			break;
+
+		case 4:
+			offLED();
+			analogWrite(dig1, segLight);
+			segDisplay(11);
+			offLED();
+			analogWrite(dig2, segLight);
+			segDisplay(11);
+			offLED();
+			delay(5);
+			offLED();
+			delay(5);
+			break;
+
+		case 5:
+			offLED();
+			analogWrite(dig1, segLight);
+			segDisplay(11);
+			offLED();
+			analogWrite(dig2, segLight);
+			segDisplay(11);
+			offLED();
+			analogWrite(dig3, segLight);
+			segDisplay(10);
+			offLED();
+			delay(5);
+			break;
+
+		case 6:
+			offLED();
+			analogWrite(dig1, segLight);
+			segDisplay(11);
+			offLED();
+			analogWrite(dig2, segLight);
+			segDisplay(11);
+			offLED();
+			analogWrite(dig3, segLight);
+			segDisplay(11);
+			offLED();
+			delay(5);
+			break;
+
+		case 7:
+			offLED();
+			analogWrite(dig1, segLight);
+			segDisplay(11);
+			offLED();
+			analogWrite(dig2, segLight);
+			segDisplay(11);
+			offLED();
+			analogWrite(dig3, segLight);
+			segDisplay(11);
+			offLED();
+			analogWrite(dig4, segLight);
+			segDisplay(10);
+			break;
+
+		case 8:
+			offLED();
+			analogWrite(dig1, segLight);
+			segDisplay(11);
+			offLED();
+			analogWrite(dig2, segLight);
+			segDisplay(11);
+			offLED();
+			analogWrite(dig3, segLight);
+			segDisplay(11);
+			offLED();
+			analogWrite(dig4, segLight);
+			segDisplay(11);
+			break;
+	}
+}
 
 void offLED()
 {
