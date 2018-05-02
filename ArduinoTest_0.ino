@@ -30,7 +30,7 @@ decode_results results;
 static const uint8_t tonePin = 3;
 uint8_t tempoToPlay  = 1;
 
-byte modeNum = -1;
+byte modeNum = 0;
 byte modeMax = 8;
 bool disModeNum = true;
 
@@ -200,16 +200,22 @@ void loop()
 
 void intp_program()
 {
-	if (digitalRead(intp) == HIGH)
-	{
-		modeNum = ++modeNum % modeMax;
-		noTone(tonePin);
-		is_playTone = false;
-		tmp = 0;
-		var = 0;
-		cycle = 101;
-		disModeNum = true;
-	}
+  static unsigned long last_interrupt_time = 0;
+  unsigned long interrupt_time = millis();
+  if (interrupt_time - last_interrupt_time > 20)
+  {
+    if (digitalRead(intp) == HIGH)
+	  {
+		  modeNum = ++modeNum % modeMax;
+		  noTone(tonePin);
+		  is_playTone = false;
+		  tmp = 0;
+		  var = 0;
+		  cycle = 101;
+		  disModeNum = true;
+	  }
+  }
+  last_interrupt_time = interrupt_time;
 }
 
 void checkS(int light)
